@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarní poznávačka</title>
+  <style>
+    :root {
+      --bg: #f4f8f3;
+      --card: #ffffff;
+      --text: #203024;
+      --muted: #6b7a6f;
+      --primary: #4caf50;
+      --primary-dark: #3e9142;
+      --danger: #e2574c;
+      --border: #dce8dd;
+      --success-bg: #e7f7e8;
+      --error-bg: #fdeceb;
+      --shadow: 0 10px 30px rgba(32, 48, 36, 0.08);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #edf7ec 0%, #f8fbf7 100%);
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.4rem, 2.2vw, 2rem);
+      font-weight: 800;
+    }
+
+    .meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      background: #f2f7f2;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 700;
+    }
+
+    .intro {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .intro p,
+    .summary-subtitle {
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+
+    .image-wrap {
+      width: 100%;
+      padding: 12px;
+      border-radius: 16px;
+      overflow: auto;
+      background: #eef4ee;
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .image-wrap img {
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 70vh;
+      display: block;
+    }
+
+    .image-fallback {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      background: repeating-linear-gradient(
+        45deg,
+        #f3f7f3,
+        #f3f7f3 12px,
+        #edf3ed 12px,
+        #edf3ed 24px
+      );
+      font-weight: 600;
+    }
+
+    .answers {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .answer-btn {
+      flex: 1 1 calc(33.333% - 10px);
+      min-width: 0;
+      border: 2px solid var(--border);
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 1rem;
+      line-height: 1.35;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      box-shadow: 0 4px 14px rgba(32, 48, 36, 0.04);
+    }
+
+    .answer-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(32, 48, 36, 0.08);
+      border-color: #bfd5c0;
+    }
+
+    .answer-btn:disabled {
+      cursor: default;
+    }
+
+    .answer-btn.correct {
+      background: var(--success-bg);
+      border-color: var(--primary);
+      color: #1d5d22;
+    }
+
+    .answer-btn.wrong {
+      background: var(--error-bg);
+      border-color: var(--danger);
+      color: #8f2d26;
+    }
+
+    .bottom-row {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .next-btn,
+    .restart-btn,
+    .start-btn {
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 14px 20px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+
+    .next-btn:hover,
+    .restart-btn:hover,
+    .start-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .next-btn[hidden] {
+      display: none;
+    }
+
+    .summary-head {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .final-score {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 900;
+      margin: 8px 0 0;
+      color: var(--primary-dark);
+    }
+
+    .results-list {
+      display: grid;
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .result-item {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 16px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fcfefc;
+    }
+
+    .result-thumb {
+      width: 100%;
+      max-height: 220px;
+      border-radius: 12px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      background: #eef4ee;
+      display: block;
+    }
+
+    .result-info h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    .result-line {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+
+    .ok {
+      color: #1d7a24;
+      font-weight: 700;
+    }
+
+    .bad {
+      color: #b4352d;
+      font-weight: 700;
+    }
+
+    .result-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 26px;
+    }
+
+    @media (max-width: 700px) {
+      .answers {
+        flex-direction: column;
+      }
+
+      .answer-btn {
+        flex: 1 1 100%;
+      }
+
+      .result-item {
+        grid-template-columns: 1fr;
+      }
+
+      .image-wrap img {
+        max-height: 45vh;
+      }
+
+      .result-thumb {
+        max-height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section id="startScreen" class="screen active">
+      <div class="card intro">
+        <h1 class="title">Jarní poznávačka rostlin</h1>
+        <p>
+          V každé hře dostaneš <strong>15 náhodných otázek</strong> z celkových 48.
+          Obrázky se načítají ze složky <strong>jarni</strong>, otázky i pořadí odpovědí se při každé hře promíchají.
+        </p>
+        <button class="start-btn" id="startBtn">Spustit hru</button>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div class="card">
+        <div class="topbar">
+          <h2 class="title">Poznej rostlinu</h2>
+          <div class="meta">
+            <div class="pill" id="progress">Otázka 1 / 15</div>
+            <div class="pill" id="score">Skóre: 0</div>
+          </div>
+        </div>
+
+        <div class="image-wrap">
+          <img id="questionImage" src="" alt="Poznávaná rostlina" />
+          <div class="image-fallback" id="imageFallback">
+            Obrázek se nepodařilo načíst.<br />
+            Zkontroluj, že soubor existuje ve složce <strong>jarni</strong>.
+          </div>
+        </div>
+
+        <div class="answers" id="answers"></div>
+
+        <div class="bottom-row">
+          <button class="next-btn" id="nextBtn" hidden>Další</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="card">
+        <div class="summary-head">
+          <h2 class="title">Výsledek hry</h2>
+          <p class="summary-subtitle">Přehled správných a chybných odpovědí za poslední sérii 15 otázek.</p>
+          <div class="final-score" id="finalScore">0 / 15</div>
+        </div>
+
+        <div class="results-list" id="resultsList"></div>
+
+        <div class="result-actions">
+          <button class="restart-btn" id="restartBtn">Hrát znovu</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const allQuestions = [
+      { image: ["jarni/cesnek_medvedi.jpg"], text: ["česnek medvědí", "česnáček lékařský", "kokoška pastuší tobolka"], correct: 0 },
+      { image: ["jarni/zlatice.jpg"], text: ["zlatice", "prvosenka jarní", "blatouch bahenní"], correct: 0 },
+      { image: ["jarni/kokoska_pastusi_tobolka.jpg"], text: ["kokoška pastuší tobolka", "penízek rolní", "česnáček lékařský"], correct: 0 },
+      { image: ["jarni/dymnivka_plna.jpg"], text: ["dymnivka plná", "dymnivka dutá", "hluchavka nachová"], correct: 0 },
+      { image: ["jarni/kopriva_dvoudoma.jpg"], text: ["kopřiva dvoudomá", "hluchavka bílá", "hluchavka nachová"], correct: 0 },
+      { image: ["jarni/stirovnik_ruzkaty.jpg"], text: ["štírovník růžkatý", "mochna husí", "lnice květel"], correct: 0 },
+      { image: ["jarni/popenec_brectanolisty.jpg"], text: ["popenec břečťanolistý", "hluchavka nachová", "pomněnka"], correct: 0 },
+      { image: ["jarni/krivatec_zluty.jpg"], text: ["křivatec žlutý", "orsej jarní", "pryskyřník prudký"], correct: 0 },
+      { image: ["jarni/jaternik_podleska.jpg"], text: ["jaterník podléška", "sasanka hajní", "sasanka pryskyřníkovitá"], correct: 0 },
+      { image: ["jarni/hluchavka_bila.jpg"], text: ["hluchavka bílá", "česnáček lékařský", "svízel vonný"], correct: 0 },
+      { image: ["jarni/sasanka_pryskyrnikovita.jpg"], text: ["sasanka pryskyřníkovitá", "sasanka hajní", "blatouch bahenní"], correct: 0 },
+      { image: ["jarni/podbilek_supinaty.jpg"], text: ["podbílek šupinatý", "podběl obecný", "pampeliška"], correct: 0 },
+      { image: ["jarni/vlastovicnik_vetsi.jpg"], text: ["vlaštovičník větší", "pryskyřník prudký", "blatouch bahenní"], correct: 0 },
+      { image: ["jarni/konvalinka_vonna.jpg"], text: ["konvalinka vonná", "česnek medvědí", "kokořík mnohokvětý"], correct: 0 },
+      { image: ["jarni/prysec_kolovratec.jpg"], text: ["pryšec kolovratec", "pryšec chvojka", "penízek rolní"], correct: 0 },
+      { image: ["jarni/hluchavka_skvrnita.jpg"], text: ["hluchavka skvrnitá", "hluchavka nachová", "zběhovec plazivý"], correct: 0 },
+      { image: ["jarni/blatouch_bahenni.jpg"], text: ["blatouch bahenní", "orsej jarní", "sasanka pryskyřníkovitá"], correct: 0 },
+      { image: ["jarni/zbehovec_plazivy.jpg"], text: ["zběhovec plazivý", "popenec břečťanolistý", "hluchavka nachová"], correct: 0 },
+      { image: ["jarni/stavel_kysely.jpg"], text: ["šťavel kyselý", "jetel plazivý", "sasanka hajní"], correct: 0 },
+      { image: ["jarni/mochna_husi.jpg"], text: ["mochna husí", "pryskyřník prudký", "orsej jarní"], correct: 0 },
+      { image: ["jarni/podbel_obecny.jpg"], text: ["podběl obecný", "pampeliška", "podbílek šupinatý"], correct: 0 },
+      { image: ["jarni/sasanka_hajni.jpg"], text: ["sasanka hajní", "sasanka pryskyřníkovitá", "šťavel kyselý"], correct: 0 },
+      { image: ["jarni/violka.jpg"], text: ["violka", "violka rolní", "rozrazil rezekvítek"], correct: 0 },
+      { image: ["jarni/kokorik_mnohokvety.jpg"], text: ["kokořík mnohokvětý", "konvalinka vonná", "česnek medvědí"], correct: 0 },
+      { image: ["jarni/bledule_jarni.jpg"], text: ["bledule jarní", "sněženka podsněžník", "sasanka hajní"], correct: 0 },
+      { image: ["jarni/koniklec.jpg"], text: ["koniklec", "podbílek šupinatý", "jaterník podléška"], correct: 0 },
+      { image: ["jarni/jetel_lucni.jpg"], text: ["jetel luční", "jetel plazivý", "štírovník růžkatý"], correct: 0 },
+      { image: ["jarni/violka_rolni.jpg"], text: ["violka rolní", "violka", "pomněnka"], correct: 0 },
+      { image: ["jarni/prysec_chvojka.jpg"], text: ["pryšec chvojka", "pryšec kolovratec", "penízek rolní"], correct: 0 },
+      { image: ["jarni/jitrocel_kopinaty.jpg"], text: ["jitrocel kopinatý", "penízek rolní", "kokoška pastuší tobolka"], correct: 0 },
+      { image: ["jarni/prvosenka_jarni.jpg"], text: ["prvosenka jarní", "křivatec žlutý", "blatouch bahenní"], correct: 0 },
+      { image: ["jarni/svizel_povazka.jpg"], text: ["svízel povázka", "svízel vonný", "česnáček lékařský"], correct: 0 },
+      { image: ["jarni/plicnik_tmavy.jpg"], text: ["plicník tmavý", "plicník lékařský", "popenec břečťanolistý"], correct: 0 },
+      { image: ["jarni/cesnacek_lekarsky.jpg"], text: ["česnáček lékařský", "česnek medvědí", "svízel vonný"], correct: 0 },
+      { image: ["jarni/sedmikraska_chudobka.jpg"], text: ["sedmikráska chudobka", "pampeliška", "sasanka hajní"], correct: 0 },
+      { image: ["jarni/rozrazil_rezekvitek.jpg"], text: ["rozrazil rezekvítek", "popenec břečťanolistý", "pomněnka"], correct: 0 },
+      { image: ["jarni/dymnivka_duta.jpg"], text: ["dymnivka dutá", "dymnivka plná", "zběhovec plazivý"], correct: 0 },
+      { image: ["jarni/pampeliska.jpg"], text: ["pampeliška", "podběl obecný", "sedmikráska chudobka"], correct: 0 },
+      { image: ["jarni/pryskyrnik_prudky.jpg"], text: ["pryskyřník prudký", "blatouch bahenní", "sasanka pryskyřníkovitá"], correct: 0 },
+      { image: ["jarni/penizek_rolni.jpg"], text: ["penízek rolní", "kokoška pastuší tobolka", "česnáček lékařský"], correct: 0 },
+      { image: ["jarni/pitulnik_zluty.jpg"], text: ["pitulník žlutý", "lnice květel", "hluchavka bílá"], correct: 0 },
+      { image: ["jarni/hluchavka_nachova.jpg"], text: ["hluchavka nachová", "popenec břečťanolistý", "hluchavka skvrnitá"], correct: 0 },
+      { image: ["jarni/jetel_plazivy.jpg"], text: ["jetel plazivý", "jetel luční", "štírovník růžkatý"], correct: 0 },
+      { image: ["jarni/snezenka_podsneznik.jpg"], text: ["sněženka podsněžník", "bledule jarní", "kokořík mnohokvětý"], correct: 0 },
+      { image: ["jarni/pomnenka.jpg"], text: ["pomněnka", "violka rolní", "rozrazil rezekvítek"], correct: 0 },
+      { image: ["jarni/svizel_vonny.jpg"], text: ["svízel vonný", "svízel povázka", "kokořík mnohokvětý"], correct: 0 },
+      { image: ["jarni/orsej_jarni.jpg"], text: ["orsej jarní", "blatouch bahenní", "sasanka pryskyřníkovitá"], correct: 0 },
+      { image: ["jarni/plicnik_lekarsky.jpg"], text: ["plicník lékařský", "plicník tmavý", "popenec břečťanolistý"], correct: 0 }
+    ];
+
+    const QUESTIONS_PER_GAME = 15;
+    const preloadedImages = new Map();
+
+    const startScreen = document.getElementById("startScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const resultScreen = document.getElementById("resultScreen");
+
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    const progressEl = document.getElementById("progress");
+    const scoreEl = document.getElementById("score");
+    const questionImage = document.getElementById("questionImage");
+    const imageFallback = document.getElementById("imageFallback");
+    const answersEl = document.getElementById("answers");
+    const finalScoreEl = document.getElementById("finalScore");
+    const resultsListEl = document.getElementById("resultsList");
+
+    let gameQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let selectedLocked = false;
+    let roundResults = [];
+
+    function shuffleArray(array) {
+      const copy = [...array];
+
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+
+      return copy;
+    }
+
+    function checkDuplicateImages(questions) {
+      const seen = new Set();
+      const duplicates = new Set();
+
+      questions.forEach((question) => {
+        const imagePath = question.image[0];
+
+        if (seen.has(imagePath)) {
+          duplicates.add(imagePath);
+        }
+
+        seen.add(imagePath);
+      });
+
+      if (duplicates.size > 0) {
+        console.warn("Duplicitní obrázky v datech:", [...duplicates]);
+      } else {
+        console.info(`Kontrola dat: ${questions.length} položek, ${seen.size} unikátních obrázků, bez duplicit.`);
+      }
+    }
+
+    function preloadImage(src) {
+      if (!src || preloadedImages.has(src)) return;
+
+      const img = new Image();
+      img.src = src;
+      preloadedImages.set(src, img);
+    }
+
+    function preloadQuestionSet(questions) {
+      questions.forEach((question) => preloadImage(question.image[0]));
+    }
+
+    function preloadUpcomingImages() {
+      const nextQuestions = gameQuestions.slice(currentIndex, currentIndex + 4);
+      nextQuestions.forEach((question) => preloadImage(question.image));
+    }
+
+    function getRandomQuestions() {
+      return shuffleArray(allQuestions)
+        .slice(0, QUESTIONS_PER_GAME)
+        .map((question) => {
+          const answers = question.text.map((label, index) => ({
+            label,
+            isCorrect: index === question.correct
+          }));
+
+          const shuffledAnswers = shuffleArray(answers);
+
+          return {
+            image: question.image[0],
+            answers: shuffledAnswers,
+            correctAnswer: question.text[question.correct]
+          };
+        });
+    }
+
+    function showScreen(screen) {
+      [startScreen, gameScreen, resultScreen].forEach((s) => s.classList.remove("active"));
+      screen.classList.add("active");
+    }
+
+    function updateScore() {
+      scoreEl.textContent = `Skóre: ${score}`;
+    }
+
+    function startGame() {
+      gameQuestions = getRandomQuestions();
+      currentIndex = 0;
+      score = 0;
+      selectedLocked = false;
+      roundResults = [];
+
+      preloadQuestionSet(allQuestions);
+      preloadUpcomingImages();
+      updateScore();
+      showScreen(gameScreen);
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      selectedLocked = false;
+      nextBtn.hidden = true;
+
+      const currentQuestion = gameQuestions[currentIndex];
+      progressEl.textContent = `Otázka ${currentIndex + 1} / ${QUESTIONS_PER_GAME}`;
+
+      preloadImage(currentQuestion.image);
+      preloadUpcomingImages();
+
+      questionImage.src = currentQuestion.image;
+      questionImage.alt = `Otázka ${currentIndex + 1}`;
+      questionImage.style.display = "block";
+      imageFallback.style.display = "none";
+
+      answersEl.innerHTML = "";
+
+      currentQuestion.answers.forEach((answer) => {
+        const btn = document.createElement("button");
+        btn.className = "answer-btn";
+        btn.textContent = answer.label;
+        btn.addEventListener("click", () => handleAnswer(btn, answer, currentQuestion));
+        answersEl.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(clickedButton, selectedAnswer, currentQuestion) {
+      if (selectedLocked) return;
+
+      selectedLocked = true;
+
+      const buttons = [...answersEl.querySelectorAll(".answer-btn")];
+
+      buttons.forEach((btn) => {
+        btn.disabled = true;
+
+        const btnAnswer = currentQuestion.answers.find((a) => a.label === btn.textContent);
+
+        if (btnAnswer && btnAnswer.isCorrect) {
+          btn.classList.add("correct");
+        }
+      });
+
+      let wasCorrect = false;
+
+      if (selectedAnswer.isCorrect) {
+        clickedButton.classList.add("correct");
+        score += 1;
+        updateScore();
+        wasCorrect = true;
+      } else {
+        clickedButton.classList.add("wrong");
+      }
+
+      roundResults.push({
+        image: currentQuestion.image,
+        wasCorrect,
+        selectedAnswer: selectedAnswer.label,
+        correctAnswer: currentQuestion.correctAnswer
+      });
+
+      nextBtn.hidden = false;
+    }
+
+    function nextQuestion() {
+      currentIndex += 1;
+
+      if (currentIndex >= gameQuestions.length) {
+        showResults();
+      } else {
+        renderQuestion();
+      }
+    }
+
+    function showResults() {
+      finalScoreEl.textContent = `${score} / ${QUESTIONS_PER_GAME}`;
+      resultsListEl.innerHTML = "";
+
+      roundResults.forEach((result, index) => {
+        const item = document.createElement("article");
+        item.className = "result-item";
+
+        const img = document.createElement("img");
+        img.className = "result-thumb";
+        img.src = result.image;
+        img.alt = `Výsledek ${index + 1}`;
+
+        const info = document.createElement("div");
+        info.className = "result-info";
+
+        const heading = document.createElement("h3");
+        heading.textContent = `Otázka ${index + 1}`;
+
+        const resultLine = document.createElement("p");
+        resultLine.className = "result-line";
+
+        if (result.wasCorrect) {
+          resultLine.innerHTML = `<span class="ok">✔ Správně:</span> ${result.correctAnswer}`;
+        } else {
+          resultLine.innerHTML = `<span class="bad">✘ Špatně:</span> ${result.selectedAnswer} <span class="bad">(správně: ${result.correctAnswer})</span>`;
+        }
+
+        const answerLine = document.createElement("p");
+        answerLine.className = "result-line";
+        answerLine.innerHTML = `<strong>Správná odpověď:</strong> ${result.correctAnswer}`;
+
+        info.appendChild(heading);
+        info.appendChild(resultLine);
+        info.appendChild(answerLine);
+
+        item.appendChild(img);
+        item.appendChild(info);
+        resultsListEl.appendChild(item);
+      });
+
+      showScreen(resultScreen);
+    }
+
+    questionImage.onerror = function () {
+      questionImage.style.display = "none";
+      imageFallback.style.display = "flex";
+    };
+
+    checkDuplicateImages(allQuestions);
+    preloadQuestionSet(allQuestions);
+
+    startBtn.addEventListener("click", startGame);
+    restartBtn.addEventListener("click", startGame);
+    nextBtn.addEventListener("click", nextQuestion);
+  </script>
+</body>
+</html>
